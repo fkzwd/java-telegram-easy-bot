@@ -21,7 +21,7 @@ ext {
     slf4jVersion = '2.0.0'
 
     tglibCommonsVersion = '1.0.1'
-    tglibBotCoreVersion = '1.0.15'
+    tglibBotCoreVersion = '1.0.0'
 
     gitRepostioryName = 'java-telegram-easy-bot'
 }

@@ -49,7 +49,7 @@ gpr.key=<ключ из шага 3>
 -  в **build.gradle** добавить **GitHub Packages** репозиторий:
 ```groovy
 ext {
-    gitRepostioryName = 'tglib-test'
+    gitRepostioryName = 'java-telegram-easy-bot'
 }
 
 repositories {
@@ -77,7 +77,7 @@ depdendencies {
 `build.gradle`:
 ```groovy
 ext {
-    tglibBotCoreVersion = '1.0.14'
+    tglibBotCoreVersion = '1.0.0'
 }
 dependencies {
     implementation "com.vk.dwzkf.tglib:bot-core:$tglibBotCoreVersion"
