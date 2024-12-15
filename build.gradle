@@ -1,0 +1,57 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.4.0' apply false
+}
+
+group = 'com.vk.dwzkf.tglib'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+
+ext {
+    lombokVersion = '1.18.30'
+    telegramBotsVersion = '6.9.7.1'
+    slf4jVersion = '2.0.0'
+
+    tglibCommonsVersion = '1.0.1'
+    tglibBotCoreVersion = '1.0.15'
+
+    gitRepostioryName = 'java-telegram-easy-bot'
+}
+
+
+subprojects {
+    apply plugin: "maven-publish"
+    repositories {
+        maven {
+            url = uri("https://maven.pkg.github.com/fkzwd/$gitRepostioryName")
+            credentials {
+                username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
+                password = project.findProperty("gpr.key") ?: System.getenv("TOKEN")
+            }
+        }
+    }
+    publishing {
+        repositories {
+            maven {
+                name = "GitHubPackages"
+                url = uri("https://maven.pkg.github.com/fkzwd/$gitRepostioryName")
+                credentials {
+                    username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
+                    password = project.findProperty("gpr.key") ?: System.getenv("TOKEN")
+                }
+            }
+        }
+    }
+}
+
+test {
+    useJUnitPlatform()
+}

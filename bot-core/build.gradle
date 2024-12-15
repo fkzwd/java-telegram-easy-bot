@@ -1,0 +1,47 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot'
+}
+apply plugin: 'io.spring.dependency-management'
+
+group = 'com.vk.dwzkf.tglib'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+tasks.withType(Javadoc).configureEach {
+    failOnError false // JavaDoc fails cause "element not closed <pre>" & "unexpected end tag: </pre>"
+}
+
+dependencies {
+    implementation "com.vk.dwzkf.tglib:commons:$tglibCommonsVersion"
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation "org.telegram:telegrambots:$telegramBotsVersion"
+
+    compileOnly "org.projectlombok:lombok:$lombokVersion"
+    annotationProcessor "org.projectlombok:lombok:$lombokVersion"
+
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+
+
+publishing {
+    publications {
+        gpr(MavenPublication) {
+            version "$tglibBotCoreVersion"
+            from components.java
+        }
+    }
+}
+
+test {
+    useJUnitPlatform()
+}

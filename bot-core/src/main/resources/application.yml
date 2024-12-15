@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: bot-core
+logging:
+  level:
+    sun: info
+    org:
+      apache: info
+    jdk: info
+    javax: info
+    root: debug
+  file:
+    path: /var/log/tg-${spring.application.name}/

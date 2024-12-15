@@ -1,0 +1,32 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.vk.dwzkf.tglib'
+version = "$tglibCommonsVersion"
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compileOnly "org.slf4j:slf4j-api:$slf4jVersion"
+    compileOnly "org.projectlombok:lombok:$lombokVersion"
+    annotationProcessor "org.projectlombok:lombok:$lombokVersion"
+
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+
+publishing {
+    publications {
+        gpr(MavenPublication) {
+            version "$tglibCommonsVersion"
+            from components.java
+        }
+    }
+}
+
+test {
+    useJUnitPlatform()
+}

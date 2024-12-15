@@ -1,0 +1,5 @@
+rootProject.name = 'tg-lib'
+include 'commons'
+include 'bot-core'
+include 'example-echo-bot'
+

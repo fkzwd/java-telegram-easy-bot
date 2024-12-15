@@ -1,0 +1,14 @@
+bot:
+  bot-name: ${BOT_NAME}
+  token: ${BOT_TOKEN}
+  secure: false
+  form-handler:
+    enabled: true
+logging:
+  level:
+    sun: info
+    org:
+      apache: info
+    jdk: info
+    javax: info
+    root: debug
