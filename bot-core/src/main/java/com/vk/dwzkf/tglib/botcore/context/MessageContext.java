@@ -17,8 +17,6 @@ import org.slf4j.LoggerFactory;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendAnimation;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
-import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.*;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
@@ -118,8 +116,8 @@ public class MessageContext {
         attributes.put(key, value);
     }
 
-    public void doAnswer(String message) throws BotCoreException {
-        doAnswer(message, chatId);
+    public Message doAnswer(String message) throws BotCoreException {
+        return doAnswer(message, chatId);
     }
 
     public Message doAnswer(String message, String chatId) throws BotCoreException {

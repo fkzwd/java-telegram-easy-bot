@@ -15,7 +15,9 @@ import com.vk.dwzkf.tglib.commons.utils.ArrayUtil;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.telegram.telegrambots.meta.api.objects.Message;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +32,7 @@ import static com.vk.dwzkf.tglib.botcore.service.UserFormService.DEFAULT_ACCESS;
 @Component
 @RequiredArgsConstructor
 @Slf4j
+//TODO: add generic MessageContext
 public class InputWaiterService extends DefaultTextMessageHandler {
     private final Map<String, LinkedList<InputWaiter>> chatWaiters = new ConcurrentHashMap<>();
     private final FormSenderService formSenderService;
@@ -44,27 +47,47 @@ public class InputWaiterService extends DefaultTextMessageHandler {
         InputFlag[] inputFlags;
         InputAwait waiter;
         InputFilter matcher;
+        InputWaiter next;
+        MessageContext sourceMessage;
+        MessageContext lastInput;
+    }
+
+    @AllArgsConstructor
+    public final class InputWaitChain {
+        InputWaiter root;
+
+        public InputWaitChain thenAwait(InputAwait waiter) {
+            root.next = createInputWaiter(waiter, root.lastInput, root.matcher, root.inputFlags);
+            return new InputWaitChain(root.next);
+        }
     }
 
     private LinkedList<InputWaiter> getChatWaiters(String chatId) {
         return chatWaiters.computeIfAbsent(chatId, key -> new LinkedList<>());
     }
 
-    public synchronized void await(InputAwait waiter, MessageContext sourceMessage) {
-        await(waiter, sourceMessage, inputContext -> true, InputFlag.values());
+    public synchronized InputWaitChain await(InputAwait waiter, MessageContext sourceMessage) {
+        return await(waiter, sourceMessage, inputContext -> true, InputFlag.values());
     }
 
-    public synchronized void await(InputAwait waiter, MessageContext sourceMessage, InputFlag... flags) {
-        await(waiter, sourceMessage, inputContext -> true, flags);
+    public synchronized InputWaitChain await(InputAwait waiter, MessageContext sourceMessage, InputFlag... flags) {
+        return await(waiter, sourceMessage, inputContext -> true, flags);
     }
 
-    public synchronized void await(InputAwait waiter, MessageContext sourceMessage, InputFilter matcher, InputFlag... flags) {
+    public synchronized InputWaitChain await(InputAwait waiter, MessageContext sourceMessage, InputFilter matcher, InputFlag... flags) {
+        InputWaiter inputWaiter = createInputWaiter(waiter, sourceMessage, matcher, flags);
+        chatWaiters.computeIfAbsent(sourceMessage.getChatId(), key -> new LinkedList<>())
+                        .add(inputWaiter);
+        return new InputWaitChain(inputWaiter);
+    }
+
+    private static InputWaiter createInputWaiter(InputAwait waiter, MessageContext sourceMessage, InputFilter matcher, InputFlag[] flags) {
         InputWaiter inputWaiter = new InputWaiter();
         inputWaiter.setWaiter(waiter);
         inputWaiter.setInputFlags(flags.length == 0 ? InputFlag.values() : flags);
         inputWaiter.setMatcher(matcher);
-        chatWaiters.computeIfAbsent(sourceMessage.getChatId(), key -> new LinkedList<>())
-                        .add(inputWaiter);
+        inputWaiter.setSourceMessage(sourceMessage);
+        return inputWaiter;
     }
 
     @Override
@@ -100,9 +123,14 @@ public class InputWaiterService extends DefaultTextMessageHandler {
         }
         List<AfterClickAction<?>> actions = null;
         try {
+            waiter.setLastInput(messageContext);
             actions = waiter.getWaiter().onInput(messageContext);
             //on success remove from queue
-            queue.remove(idx);
+            if (waiter.next == null) {
+                queue.remove(idx);
+            } else {
+                queue.set(idx, waiter.next);
+            }
         } catch (OnInputException e) {
             if (log.isDebugEnabled())
                 log.info("Exception on input. {}", e.getMessage(), e);
@@ -112,6 +140,10 @@ public class InputWaiterService extends DefaultTextMessageHandler {
             if (e.isInterrupt()) {
                 queue.remove(idx);
             }
+        } catch (BotCoreException e) {
+            //is it ok?
+            queue.remove(idx);
+            throw e;
         }
         for (AfterClickAction<?> action : actions) {
             if (action.is(ActionType.ANSWER_TEXT)) {
