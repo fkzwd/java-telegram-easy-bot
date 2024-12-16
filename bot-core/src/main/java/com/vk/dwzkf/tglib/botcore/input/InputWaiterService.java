@@ -52,8 +52,13 @@ public class InputWaiterService extends DefaultTextMessageHandler {
         MessageContext lastInput;
     }
 
+    private static InputFilter defaultInputFilter(MessageContext sourceMessage) {
+        return inputContext ->
+                inputContext.getUserId().equals(sourceMessage.getUserId());
+    }
+
     @AllArgsConstructor
-    public final class InputWaitChain {
+    public static final class InputWaitChain {
         InputWaiter root;
 
         public InputWaitChain thenAwait(InputAwait waiter) {
@@ -67,17 +72,20 @@ public class InputWaiterService extends DefaultTextMessageHandler {
     }
 
     public synchronized InputWaitChain await(InputAwait waiter, MessageContext sourceMessage) {
-        return await(waiter, sourceMessage, inputContext -> true, InputFlag.values());
+        return await(
+                waiter, sourceMessage, defaultInputFilter(sourceMessage),
+                InputFlag.values()
+        );
     }
 
     public synchronized InputWaitChain await(InputAwait waiter, MessageContext sourceMessage, InputFlag... flags) {
-        return await(waiter, sourceMessage, inputContext -> true, flags);
+        return await(waiter, sourceMessage, defaultInputFilter(sourceMessage), flags);
     }
 
     public synchronized InputWaitChain await(InputAwait waiter, MessageContext sourceMessage, InputFilter matcher, InputFlag... flags) {
         InputWaiter inputWaiter = createInputWaiter(waiter, sourceMessage, matcher, flags);
         chatWaiters.computeIfAbsent(sourceMessage.getChatId(), key -> new LinkedList<>())
-                        .add(inputWaiter);
+                .add(inputWaiter);
         return new InputWaitChain(inputWaiter);
     }
 
