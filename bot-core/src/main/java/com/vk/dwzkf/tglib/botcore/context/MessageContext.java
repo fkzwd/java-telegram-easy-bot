@@ -171,6 +171,14 @@ public class MessageContext {
         throw new NotFoundException("Not found chat in update");
     }
 
+    public Integer getMessageId() {
+        Message message = update.getMessage();
+        if (message != null) {
+            return message.getMessageId();
+        }
+        return null;
+    }
+
     public User getFrom() {
         Message message = update.getMessage();
         if (message != null) {
@@ -208,5 +216,13 @@ public class MessageContext {
                 return bot.execute(sendAnimation);
             }
         });
+    }
+
+    public Message doReply(String replyText) throws BotCoreException{
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(chatId);
+        sendMessage.setText(replyText);
+        sendMessage.setReplyToMessageId(getMessageId());
+        return doAnswer(sendMessage, chatId);
     }
 }

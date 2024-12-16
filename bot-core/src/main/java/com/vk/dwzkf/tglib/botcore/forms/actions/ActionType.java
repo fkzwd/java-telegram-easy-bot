@@ -17,6 +17,7 @@ public class ActionType<T> {
     public static final ActionType<Void> DELETE_MESSAGE = new ActionType<>(Void.class);
     public static final ActionType<Form> CREATE_FORM = new ActionType<>(Form.class);
     public static final ActionType<String> ANSWER_TEXT = new ActionType<>(String.class);
+    public static final ActionType<String> REPLY_TEXT = new ActionType<>(String.class);
 
     private final Class<T> dataClass;
     private ActionType(Class<T> dataClass){

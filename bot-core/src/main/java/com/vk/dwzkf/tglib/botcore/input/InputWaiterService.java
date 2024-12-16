@@ -157,6 +157,9 @@ public class InputWaiterService extends DefaultTextMessageHandler {
                         userFormService,
                         DEFAULT_ACCESS
                 );
+            } else if (action.is(ActionType.REPLY_TEXT)) {
+                String replyText = action.as(ActionType.REPLY_TEXT).getObject();
+                messageContext.doReply(replyText);
             }
         }
     }
