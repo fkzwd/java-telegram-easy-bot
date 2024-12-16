@@ -78,9 +78,11 @@ depdendencies {
 ```groovy
 ext {
     tglibBotCoreVersion = '1.0.0'
+    telegramBotsVersion = '6.9.7.1'
 }
 dependencies {
     implementation "com.vk.dwzkf.tglib:bot-core:$tglibBotCoreVersion"
+    implementation "org.telegram:telegrambots:$telegramBotsVersion"
 }
 ```
 #### 3. Настройка проперти
