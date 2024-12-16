@@ -3,6 +3,7 @@ package com.vk.dwzkf.tglib.botcore.input;
 import com.vk.dwzkf.tglib.botcore.context.MessageContext;
 import com.vk.dwzkf.tglib.botcore.enums.InputFlag;
 import com.vk.dwzkf.tglib.botcore.exception.BotCoreException;
+import com.vk.dwzkf.tglib.botcore.exception.NotFoundException;
 import com.vk.dwzkf.tglib.botcore.exception.OnInputException;
 import com.vk.dwzkf.tglib.botcore.forms.actions.ActionType;
 import com.vk.dwzkf.tglib.botcore.forms.actions.AfterClickAction;
@@ -22,6 +23,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 
 import static com.vk.dwzkf.tglib.botcore.service.UserFormService.DEFAULT_ACCESS;
 
@@ -48,7 +50,7 @@ public class InputWaiterService extends DefaultTextMessageHandler {
         InputAwait waiter;
         InputFilter matcher;
         InputWaiter next;
-        MessageContext sourceMessage;
+        Supplier<MessageContext> sourceMessage = () -> {throw new NotFoundException("Not found source message");};
         MessageContext lastInput;
     }
 
@@ -62,7 +64,7 @@ public class InputWaiterService extends DefaultTextMessageHandler {
         InputWaiter root;
 
         public InputWaitChain thenAwait(InputAwait waiter) {
-            root.next = createInputWaiter(waiter, root.lastInput, root.matcher, root.inputFlags);
+            root.next = createInputWaiter(waiter, () -> root.lastInput, root.matcher, root.inputFlags);
             return new InputWaitChain(root.next);
         }
     }
@@ -83,13 +85,13 @@ public class InputWaiterService extends DefaultTextMessageHandler {
     }
 
     public synchronized InputWaitChain await(InputAwait waiter, MessageContext sourceMessage, InputFilter matcher, InputFlag... flags) {
-        InputWaiter inputWaiter = createInputWaiter(waiter, sourceMessage, matcher, flags);
+        InputWaiter inputWaiter = createInputWaiter(waiter, () -> sourceMessage, matcher, flags);
         chatWaiters.computeIfAbsent(sourceMessage.getChatId(), key -> new LinkedList<>())
                 .add(inputWaiter);
         return new InputWaitChain(inputWaiter);
     }
 
-    private static InputWaiter createInputWaiter(InputAwait waiter, MessageContext sourceMessage, InputFilter matcher, InputFlag[] flags) {
+    private static InputWaiter createInputWaiter(InputAwait waiter, Supplier<MessageContext> sourceMessage, InputFilter matcher, InputFlag[] flags) {
         InputWaiter inputWaiter = new InputWaiter();
         inputWaiter.setWaiter(waiter);
         inputWaiter.setInputFlags(flags.length == 0 ? InputFlag.values() : flags);
@@ -141,15 +143,30 @@ public class InputWaiterService extends DefaultTextMessageHandler {
             }
         } catch (OnInputException e) {
             if (log.isDebugEnabled())
-                log.info("Exception on input. {}", e.getMessage(), e);
+                log.info("Exception on input: {}. Input waiting source: chatId={} messageId={}",
+                        e.getMessage(),
+                        waiter.sourceMessage.get().getChatId(),
+                        waiter.sourceMessage.get().getMessageId(),
+                        e
+                );
             else
-                log.info("Exception on input. {}", e.getMessage());
+                log.info("Exception on input. {} chatId={} messageId={}",
+                        e.getMessage(),
+                        waiter.sourceMessage.get().getChatId(),
+                        waiter.sourceMessage.get().getMessageId()
+                );
             actions = e.getActions();
             if (e.isInterrupt()) {
                 queue.remove(idx);
             }
         } catch (BotCoreException e) {
             //is it ok?
+            log.error(
+                    "Error occurred; Waiter removed. Waiter source: chatId={}, messageId={}",
+                    waiter.getSourceMessage().get().getChatId(),
+                    waiter.getSourceMessage().get().getMessageId(),
+                    e
+            );
             queue.remove(idx);
             throw e;
         }
