@@ -23,6 +23,9 @@ public class CancelAwaitCommand {
     @RouteCommandHandler
     public void handle(MessageContext messageContext) throws BotCoreException {
         List<MessageContext> messageContexts = inputWaiterService.cancelAll(messageContext);
+        if (messageContexts.isEmpty()) {
+            messageContext.doReply("Нет ожидающих команд");
+        }
         for (MessageContext context : messageContexts) {
             context.doReply("Команда остановлена");
         }
