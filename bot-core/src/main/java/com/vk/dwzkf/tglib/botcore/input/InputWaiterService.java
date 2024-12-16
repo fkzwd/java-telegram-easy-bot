@@ -16,9 +16,7 @@ import com.vk.dwzkf.tglib.commons.utils.ArrayUtil;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.telegram.telegrambots.meta.api.objects.Message;
 
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -50,6 +48,7 @@ public class InputWaiterService extends DefaultTextMessageHandler {
         InputAwait waiter;
         InputFilter matcher;
         InputWaiter next;
+        MessageContext rootContext;
         Supplier<MessageContext> sourceMessage = () -> {throw new NotFoundException("Not found source message");};
         MessageContext lastInput;
     }
@@ -61,11 +60,13 @@ public class InputWaiterService extends DefaultTextMessageHandler {
 
     @AllArgsConstructor
     public static final class InputWaitChain {
-        InputWaiter root;
+        InputWaiter current;
 
         public InputWaitChain thenAwait(InputAwait waiter) {
-            root.next = createInputWaiter(waiter, () -> root.lastInput, root.matcher, root.inputFlags);
-            return new InputWaitChain(root.next);
+            InputWaiter next = createInputWaiter(waiter, () -> current.lastInput, current.matcher, current.inputFlags);
+            next.rootContext = current.rootContext;
+            current.next = next;
+            return new InputWaitChain(next);
         }
     }
 
@@ -86,9 +87,20 @@ public class InputWaiterService extends DefaultTextMessageHandler {
 
     public synchronized InputWaitChain await(InputAwait waiter, MessageContext sourceMessage, InputFilter matcher, InputFlag... flags) {
         InputWaiter inputWaiter = createInputWaiter(waiter, () -> sourceMessage, matcher, flags);
+        inputWaiter.setRootContext(sourceMessage);
         chatWaiters.computeIfAbsent(sourceMessage.getChatId(), key -> new LinkedList<>())
                 .add(inputWaiter);
         return new InputWaitChain(inputWaiter);
+    }
+
+    /**
+     * Завершить все эвэйты в данном чате, созданные пользователем,
+     * отправившим запрос на завершение
+     * @param cancelRequest
+     */
+    public synchronized void cancelAll(MessageContext cancelRequest) {
+        getChatWaiters(cancelRequest.getChatId())
+                .removeIf(waiter -> waiter.rootContext.getUserId().equals(cancelRequest.getUserId()));
     }
 
     private static InputWaiter createInputWaiter(InputAwait waiter, Supplier<MessageContext> sourceMessage, InputFilter matcher, InputFlag[] flags) {
