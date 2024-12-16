@@ -8,6 +8,8 @@ import com.vk.dwzkf.tglib.botcore.input.InputWaiterService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 /**
  * @author Roman Shageev
  * @since 17.12.2024
@@ -20,7 +22,9 @@ public class CancelAwaitCommand {
 
     @RouteCommandHandler
     public void handle(MessageContext messageContext) throws BotCoreException {
-        inputWaiterService.cancelAll(messageContext);
-        messageContext.doReply("Все инпуты остановлены");
+        List<MessageContext> messageContexts = inputWaiterService.cancelAll(messageContext);
+        for (MessageContext context : messageContexts) {
+            context.doReply("Команда остановлена");
+        }
     }
 }

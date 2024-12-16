@@ -19,6 +19,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
@@ -97,10 +98,20 @@ public class InputWaiterService extends DefaultTextMessageHandler {
      * Завершить все эвэйты в данном чате, созданные пользователем,
      * отправившим запрос на завершение
      * @param cancelRequest
+     * @return возвращает список всех месаджей которые инициировали инпуты
      */
-    public synchronized void cancelAll(MessageContext cancelRequest) {
-        getChatWaiters(cancelRequest.getChatId())
-                .removeIf(waiter -> waiter.rootContext.getUserId().equals(cancelRequest.getUserId()));
+    public synchronized List<MessageContext> cancelAll(MessageContext cancelRequest) throws BotCoreException{
+        List<MessageContext> inputInitiators = new LinkedList<>();
+        ListIterator<InputWaiter> iterator = getChatWaiters(cancelRequest.getChatId()).listIterator();
+        InputWaiter waiter;
+        while (iterator.hasNext()) {
+            waiter = iterator.next();
+            if (waiter.rootContext.getUserId().equals(cancelRequest.getUserId())) {
+                inputInitiators.add(waiter.rootContext);
+                iterator.remove();
+            }
+        }
+        return inputInitiators;
     }
 
     private static InputWaiter createInputWaiter(InputAwait waiter, Supplier<MessageContext> sourceMessage, InputFilter matcher, InputFlag[] flags) {
