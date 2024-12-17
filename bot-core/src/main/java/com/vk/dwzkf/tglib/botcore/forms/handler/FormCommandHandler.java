@@ -90,6 +90,8 @@ public class FormCommandHandler implements CommandHandler<MessageContext>, AutoR
                     return;
                 }
                 messageContext.doDelete(messageId, chatId);
+            } else if (action.is(ActionType.REPLY_TEXT)) {
+                messageContext.doReply(action.as(ActionType.REPLY_TEXT).getObject());
             }
         }
     }

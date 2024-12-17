@@ -15,6 +15,7 @@ repositories {
 dependencies {
     implementation "com.vk.dwzkf.tglib:bot-core:$tglibBotCoreVersion"
 //    implementation project(':bot-core')
+    implementation "org.telegram:telegrambots:$telegramBotsVersion"
     implementation 'org.springframework.boot:spring-boot-starter'
 
     compileOnly "org.projectlombok:lombok:$lombokVersion"

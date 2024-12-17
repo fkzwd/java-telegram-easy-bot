@@ -20,6 +20,7 @@ public class OnInputException extends BotCoreException {
     private boolean interrupt = false;
 
     public OnInputException(List<AfterClickAction<?>> actions) {
+        super("Bad input received");
         this.actions = actions;
     }
 

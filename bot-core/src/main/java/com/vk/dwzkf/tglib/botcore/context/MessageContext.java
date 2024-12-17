@@ -17,8 +17,6 @@ import org.slf4j.LoggerFactory;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendAnimation;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
-import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.*;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
@@ -118,8 +116,8 @@ public class MessageContext {
         attributes.put(key, value);
     }
 
-    public void doAnswer(String message) throws BotCoreException {
-        doAnswer(message, chatId);
+    public Message doAnswer(String message) throws BotCoreException {
+        return doAnswer(message, chatId);
     }
 
     public Message doAnswer(String message, String chatId) throws BotCoreException {
@@ -173,6 +171,14 @@ public class MessageContext {
         throw new NotFoundException("Not found chat in update");
     }
 
+    public Integer getMessageId() {
+        Message message = update.getMessage();
+        if (message != null) {
+            return message.getMessageId();
+        }
+        return null;
+    }
+
     public User getFrom() {
         Message message = update.getMessage();
         if (message != null) {
@@ -210,5 +216,13 @@ public class MessageContext {
                 return bot.execute(sendAnimation);
             }
         });
+    }
+
+    public Message doReply(String replyText) throws BotCoreException{
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(chatId);
+        sendMessage.setText(replyText);
+        sendMessage.setReplyToMessageId(getMessageId());
+        return doAnswer(sendMessage, chatId);
     }
 }

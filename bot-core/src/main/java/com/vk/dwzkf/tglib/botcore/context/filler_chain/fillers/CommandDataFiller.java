@@ -18,7 +18,8 @@ import java.util.regex.Pattern;
 public class CommandDataFiller extends DefaultContextFiller {
     public static final String[] EMPTY_ARGS = new String[0];
     private ArgumentParser argumentParser = new ArgumentParser();
-    Pattern commandPattern = Pattern.compile("(?<command>/[^@\\s]+)((@)(?<botname>\\S+))?(( )(?<args>.*))?");
+    //TODO: вынести в отдельный класс чтобы можно было протестировать
+    Pattern commandPattern = Pattern.compile("^(?<command>/[^@\\s]+)((@)(?<botname>\\S+))?(([ \\n\\r])(?<args>(.|[\\n\\r])*))?");
 
     @Override
     public void fill(MessageContext ctx, MessageFillerChain chain) {

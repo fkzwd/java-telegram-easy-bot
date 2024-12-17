@@ -78,9 +78,11 @@ depdendencies {
 ```groovy
 ext {
     tglibBotCoreVersion = '1.0.0'
+    telegramBotsVersion = '6.9.7.1'
 }
 dependencies {
     implementation "com.vk.dwzkf.tglib:bot-core:$tglibBotCoreVersion"
+    implementation "org.telegram:telegrambots:$telegramBotsVersion"
 }
 ```
 #### 3. Настройка проперти
@@ -221,6 +223,128 @@ public class CustomContextHandler {
 ```
 *Результат:*  
 ![](./docs/img/example_custom_context.gif)
+#### 9. Последовательный ввод данных
+Для последовательного ввода данных используется класс `InputWaiterService`  
+и его методы `await`, `thenAwait`  
+
+По умолчанию `await` принимает текстовый инпут только в том чате,  
+в которым был инициирован, и от того юзера, который инициировал.
+
+> `await` - ждет текстового инпута от юзера-инициатора  
+
+> `thenAwait` - позволяет зачейнить ожидание инпута для этого юзера.
+> После того, как предыдущий инпут отработал, на его место встаёт тот,
+> который передан в `thenAwait`
+
+На примере заполнения следующего контекста:  
+```java
+private static class ChainedInputContext {
+    private String firstName;
+    private String lastName;
+    private int age;
+}
+```
+
+- Создаем обработчик для команды и внедряем в него `InputWaiterService`
+```java
+@RouteCommand(command = "chained")
+@Service
+@RequiredArgsConstructor
+public class ChainedInputWait {
+    private final InputWaiterService inputWaiterService;
+
+    @RouteCommandHandler
+    public void handle(CustomContext ctx) throws BotCoreException {
+```
+- Создаем обработчик текстового инпута; Он будет ждать корректного ввода.  
+При успехе будет обрабатывать данные и отвечать юзеру
+```java
+    private static InputAwait getSimpleString(
+            Consumer<String> valueConsumer,
+            String errorMessage,
+            String replyMessage
+    ) throws OnInputException {
+        return inputContext -> {
+            String message = inputContext.getMessage();
+            if (!message.matches("[a-zA-Z]+")) {
+                throw new OnInputException(
+                        List.of(
+                                ActionType.REPLY_TEXT.createAction(errorMessage)
+                        )
+                ).setInterrupt(false);
+            }
+            valueConsumer.accept(message);
+            return List.of(
+                    ActionType.REPLY_TEXT.createAction(replyMessage)
+            );
+        };
+    }
+```
+- Создаем обработчик для ввода возраста  
+Он будет ждать корректного возраста и при успехе возвращать форму  
+с введенными данными
+```java
+    private InputAwait getAge(ChainedInputContext context) throws OnInputException {
+        return inputContext -> {
+            String message = inputContext.getMessage();
+            if (!message.matches("\\d+")) {
+                throw new OnInputException(
+                        List.of(
+                                ActionType.REPLY_TEXT.createAction("Некорректный ввод. Введите возраст")
+                        )
+                ).setInterrupt(false);
+            }
+            context.age = Integer.parseInt(message);
+            return List.of(
+                    ActionType.CREATE_FORM.createAction(createDataForm(context))
+            );
+        };
+    }
+```
+- Метод для создания формы вывода данных
+```java
+    private Form createDataForm(ChainedInputContext ctx) {
+        Form form = new Form();
+        form.setTextProvider(() -> {
+            return """
+                    <b>Имя:</b> %s
+                    <b>Фамилия:</b> %s
+                    <b>Возраст:</b> %s
+                    """.formatted(
+                    ctx.firstName,
+                    ctx.lastName,
+                    ctx.age
+            );
+        });
+        form.createControls(false, true);
+        return form;
+    }
+```
+- Собираем всё вместе
+```java
+    @RouteCommandHandler
+    public void handle(CustomContext ctx) throws BotCoreException {
+        ChainedInputContext context = new ChainedInputContext();
+        ctx.doReply("Введите имя");
+        inputWaiterService
+                .await(
+                        getSimpleString(
+                                value -> context.firstName = value,
+                                "Некорректный ввод. Введите имя",
+                                "Введите фамилию"
+                        ),
+                        ctx
+                )
+                .thenAwait(getSimpleString(
+                        value -> context.lastName = value,
+                        "Некорректный ввод. Введите фамилию",
+                        "Введите возраст"
+                ))
+                .thenAwait(getAge(context));
+    }
+```
+_Результат:_  
+![](./docs/img/example_chained_input.gif)
 #### 42. Заполнение пользовательского контекста
 > TODO: ...
 ___
@@ -228,3 +352,7 @@ ___
 1. Поддержка различных `ActionType`
 2. Добавить `UnauthorizedHandler`
 3. Обработка когда форма обновляется точно такой же `[400] Bad Request: message is not modified`
+4. Добавить возможность отменять `InputWaitChain`  
+_например в инпуте вернуть форму и в ней кнопка "Завершить"_    
+_или по команде `/cancel`_
+5. 
