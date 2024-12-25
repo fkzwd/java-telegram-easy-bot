@@ -4,7 +4,7 @@ bot:
   secure: false
   task-queue:
     default-bot-task-queue:
-      task-execution-rate: 10
+      task-execution-rate: 1
       task-execution-time-unit: SECONDS
   form-handler:
     enabled: true

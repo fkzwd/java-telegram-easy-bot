@@ -54,7 +54,7 @@ public class DefaultBotTaskQueue implements BotTaskQueue {
                     }
             );
         }
-        taskExecutor.scheduleAtFixedRate(
+        taskExecutor.scheduleWithFixedDelay(
                 this::executorLoop,
                 INITIAL_DELAY,
                 defaultBotTaskQueueConfig.getTaskExecutionRate(),
