@@ -6,6 +6,13 @@ bot:
     default-bot-task-queue:
       task-execution-rate: 1
       task-execution-time-unit: SECONDS
+    smart-bot-task-queue:
+      limit: 2
+      window: 5
+      unit: SECONDS
+      default-bot-task-queue:
+        task-execution-rate: 150
+        task-execution-time-unit: MILLISECONDS
   form-handler:
     enabled: true
 logging:

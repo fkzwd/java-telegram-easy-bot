@@ -11,13 +11,18 @@ import java.util.concurrent.TimeUnit;
  * @since 25.12.2024
  */
 @Configuration
-@ConfigurationProperties("bot.task-queue.default-bot-task-queue")
+@ConfigurationProperties("bot.task-queue.smart-bot-task-queue")
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
 @ToString
-public class DefaultBotTaskQueueConfig {
-    private Long taskExecutionRate = 1L;
-    private TimeUnit taskExecutionTimeUnit = TimeUnit.SECONDS;
+public class SmartBotTaskQueueConfig {
+    private int limit = 2;
+    private TimeUnit unit = TimeUnit.SECONDS;
+    private int window = 1;
+    private DefaultBotTaskQueueConfig defaultBotTaskQueueConfig = new DefaultBotTaskQueueConfig(
+            150L,
+            TimeUnit.MILLISECONDS
+    );
 }
