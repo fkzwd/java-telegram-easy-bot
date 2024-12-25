@@ -28,15 +28,8 @@ public class DefaultBotTaskQueue implements BotTaskQueue {
     private final DefaultBotTaskQueueConfig defaultBotTaskQueueConfig;
 
     private final BlockingQueue<ExecutableTask<?>> queue = new ArrayBlockingQueue<>(1000);
-    private final ScheduledExecutorService taskExecutor = new ScheduledThreadPoolExecutor(
-            1,
-            r -> {
-                Thread thread = new Thread(r);
-                thread.setName("DefaultBotTaskQueue [" + thread.getName() + "]");
-                thread.setDaemon(true);
-                return thread;
-            }
-    );
+    @Setter
+    private ScheduledExecutorService taskExecutor = null;
 
     private final TelegramLongPollingBot bot;
 
@@ -50,6 +43,17 @@ public class DefaultBotTaskQueue implements BotTaskQueue {
 
     @Override
     public void init() {
+        if (taskExecutor == null) {
+            taskExecutor = new ScheduledThreadPoolExecutor(
+                    1,
+                    r -> {
+                        Thread thread = new Thread(r);
+                        thread.setName("DefaultBotTaskQueue [" + thread.getName() + "]");
+                        thread.setDaemon(true);
+                        return thread;
+                    }
+            );
+        }
         taskExecutor.scheduleAtFixedRate(
                 this::executorLoop,
                 INITIAL_DELAY,

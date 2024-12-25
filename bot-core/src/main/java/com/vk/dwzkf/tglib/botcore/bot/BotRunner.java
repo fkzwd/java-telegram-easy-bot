@@ -1,6 +1,7 @@
 package com.vk.dwzkf.tglib.botcore.bot;
 
 import com.vk.dwzkf.tglib.botcore.bot.queue.BotTaskQueue;
+import com.vk.dwzkf.tglib.botcore.bot.queue.ChatAwareBotTaskQueue;
 import com.vk.dwzkf.tglib.botcore.bot.queue.DefaultBotTaskQueue;
 import com.vk.dwzkf.tglib.botcore.bot.queue.cfg.DefaultBotTaskQueueConfig;
 import com.vk.dwzkf.tglib.botcore.context.MessageContext;
@@ -18,6 +19,12 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+
 /**
  * @author Roman Shageev
  * @since 11.10.2023
@@ -31,6 +38,7 @@ public class BotRunner extends TelegramLongPollingBot {
     private final DefaultMessageHandler messageHandler;
     private final MessageContextFiller messageContextFiller;
     private final MessageContextFactory<? extends MessageContext> messageContextFactory;
+    private final List<Executor> executors = Collections.synchronizedList(new ArrayList<>());
 
     public BotRunner(
             BotConfig botConfig,
@@ -45,7 +53,11 @@ public class BotRunner extends TelegramLongPollingBot {
         this.botConfig = botConfig;
         this.messageHandler = messageHandler;
         this.messageContextFiller = messageContextFiller;
-        this.botTaskQueue = new DefaultBotTaskQueue(defaultBotTaskQueueConfig, this);
+        this.botTaskQueue = new ChatAwareBotTaskQueue(defaultBotTaskQueueConfig, this);
+        final int processors = Runtime.getRuntime().availableProcessors();
+        for (int i = 0; i < processors; i++) {
+            executors.add(Executors.newSingleThreadExecutor());
+        }
     }
 
 
@@ -62,17 +74,30 @@ public class BotRunner extends TelegramLongPollingBot {
         ctx.setBot(this);
         ctx.setTaskQueue(this.botTaskQueue);
         if (update.getMessage() != null) {
-            boolean hasText = update.getMessage().getText() != null;
-            boolean hasCaption = update.getMessage().getCaption() != null;
-            hasCaption |= update.getMessage().getCaptionEntities() != null && !update.getMessage().getCaptionEntities().isEmpty();
-            if (hasText || hasCaption) {
+            Executor executor = resolveExecutor(update.getMessage().getChatId());
+            executor.execute(() -> {
+                boolean hasText = update.getMessage().getText() != null;
+                boolean hasCaption = update.getMessage().getCaption() != null;
+                hasCaption |= update.getMessage().getCaptionEntities() != null && !update.getMessage().getCaptionEntities().isEmpty();
+                if (hasText || hasCaption) {
+                    messageContextFiller.fillContext(ctx, update);
+                    messageHandler.handleMessage(ctx);
+                }
+            });
+        } else if (update.getCallbackQuery() != null) {
+            Executor executor = resolveExecutor(update.getCallbackQuery().getMessage().getChatId());
+            executor.execute(() -> {
                 messageContextFiller.fillContext(ctx, update);
                 messageHandler.handleMessage(ctx);
-            }
-        } else if (update.getCallbackQuery() != null) {
-            messageContextFiller.fillContext(ctx, update);
-            messageHandler.handleMessage(ctx);
+            });
         }
+    }
+
+    private Executor resolveExecutor(Long chatId) {
+        long size = executors.size();
+        long chat = Math.abs(chatId);
+        int index = (int) (chat % size);
+        return executors.get(index);
     }
 
     @Override
