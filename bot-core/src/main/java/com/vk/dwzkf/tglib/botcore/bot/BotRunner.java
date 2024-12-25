@@ -2,6 +2,7 @@ package com.vk.dwzkf.tglib.botcore.bot;
 
 import com.vk.dwzkf.tglib.botcore.bot.queue.BotTaskQueue;
 import com.vk.dwzkf.tglib.botcore.bot.queue.DefaultBotTaskQueue;
+import com.vk.dwzkf.tglib.botcore.bot.queue.cfg.DefaultBotTaskQueueConfig;
 import com.vk.dwzkf.tglib.botcore.context.MessageContext;
 import com.vk.dwzkf.tglib.botcore.context.MessageContextFactory;
 import com.vk.dwzkf.tglib.botcore.context.MessageContextFiller;
@@ -35,7 +36,8 @@ public class BotRunner extends TelegramLongPollingBot {
             BotConfig botConfig,
             DefaultMessageHandler messageHandler,
             MessageContextFiller messageContextFiller,
-            MessageContextFactory<? extends MessageContext> messageContextFactory
+            MessageContextFactory<? extends MessageContext> messageContextFactory,
+            DefaultBotTaskQueueConfig defaultBotTaskQueueConfig
     ) throws Exception {
         super(botConfig.getToken());
         this.messageContextFactory = messageContextFactory;
@@ -43,7 +45,7 @@ public class BotRunner extends TelegramLongPollingBot {
         this.botConfig = botConfig;
         this.messageHandler = messageHandler;
         this.messageContextFiller = messageContextFiller;
-        this.botTaskQueue = new DefaultBotTaskQueue(this);
+        this.botTaskQueue = new DefaultBotTaskQueue(defaultBotTaskQueueConfig, this);
     }
 
 

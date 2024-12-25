@@ -1,5 +1,6 @@
 package com.vk.dwzkf.tglib.botcore.bot.queue;
 
+import com.vk.dwzkf.tglib.botcore.bot.queue.cfg.DefaultBotTaskQueueConfig;
 import com.vk.dwzkf.tglib.botcore.exception.BotCoreException;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -19,18 +20,19 @@ import java.util.concurrent.*;
 @Slf4j
 @RequiredArgsConstructor
 public class DefaultBotTaskQueue implements BotTaskQueue {
-    private static final long EXECUTION_TIMEOUT = 5;
-    private static final TimeUnit EXECUTION_TIMEOUT_UNIT = TimeUnit.SECONDS;
+    private static final long SYNC_EXECUTION_TIMEOUT = 5;
+    private static final TimeUnit SYNC_EXECUTION_TIMEOUT_UNIT = TimeUnit.SECONDS;
     //TODO: сделать возможность конфигурировать эти параметры
-    public static final long TASK_EXECUTION_RATE = 150L;
     public static final long INITIAL_DELAY = 0L;
+    public static final int SYNC_EXECUTION_TIMEOUT_RATE_MULTIPIER = 30;
+    private final DefaultBotTaskQueueConfig defaultBotTaskQueueConfig;
 
     private final BlockingQueue<ExecutableTask<?>> queue = new ArrayBlockingQueue<>(1000);
     private final ScheduledExecutorService taskExecutor = new ScheduledThreadPoolExecutor(
             1,
             r -> {
                 Thread thread = new Thread(r);
-                thread.setName("DefaultBotTaskQueue ["+thread.getName()+"]");
+                thread.setName("DefaultBotTaskQueue [" + thread.getName() + "]");
                 thread.setDaemon(true);
                 return thread;
             }
@@ -51,8 +53,8 @@ public class DefaultBotTaskQueue implements BotTaskQueue {
         taskExecutor.scheduleAtFixedRate(
                 this::executorLoop,
                 INITIAL_DELAY,
-                TASK_EXECUTION_RATE,
-                TimeUnit.MILLISECONDS
+                defaultBotTaskQueueConfig.getTaskExecutionRate(),
+                defaultBotTaskQueueConfig.getTaskExecutionTimeUnit()
         );
     }
 
@@ -116,7 +118,10 @@ public class DefaultBotTaskQueue implements BotTaskQueue {
     public <T> T execute(MessageTask<T> messageTask) throws BotCoreException {
         try {
             return executeAsync(messageTask)
-                    .get(EXECUTION_TIMEOUT, EXECUTION_TIMEOUT_UNIT);
+                    .get(
+                            defaultBotTaskQueueConfig.getTaskExecutionRate() * SYNC_EXECUTION_TIMEOUT_RATE_MULTIPIER,
+                            defaultBotTaskQueueConfig.getTaskExecutionTimeUnit()
+                    );
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
             log.error("Error while executing task {} {}", messageTask.getClass().getSimpleName(), messageTask, e);
             if (e.getCause() instanceof BotCoreException botCoreException) {

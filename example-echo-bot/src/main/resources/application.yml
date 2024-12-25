@@ -2,6 +2,10 @@ bot:
   bot-name: ${BOT_NAME}
   token: ${BOT_TOKEN}
   secure: false
+  task-queue:
+    default-bot-task-queue:
+      task-execution-rate: 1000
+      task-execution-time-unit: MILLISECONDS
   form-handler:
     enabled: true
 logging:
