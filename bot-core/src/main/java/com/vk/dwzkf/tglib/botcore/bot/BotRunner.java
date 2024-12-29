@@ -1,10 +1,7 @@
 package com.vk.dwzkf.tglib.botcore.bot;
 
+import com.vk.dwzkf.tglib.botcore.bot.queue.BotQueueFactory;
 import com.vk.dwzkf.tglib.botcore.bot.queue.BotTaskQueue;
-import com.vk.dwzkf.tglib.botcore.bot.queue.ChatAwareBotTaskQueue;
-import com.vk.dwzkf.tglib.botcore.bot.queue.DefaultBotTaskQueue;
-import com.vk.dwzkf.tglib.botcore.bot.queue.cfg.DefaultBotTaskQueueConfig;
-import com.vk.dwzkf.tglib.botcore.bot.queue.cfg.SmartBotTaskQueueConfig;
 import com.vk.dwzkf.tglib.botcore.context.MessageContext;
 import com.vk.dwzkf.tglib.botcore.context.MessageContextFactory;
 import com.vk.dwzkf.tglib.botcore.context.MessageContextFiller;
@@ -46,8 +43,7 @@ public class BotRunner extends TelegramLongPollingBot {
             DefaultMessageHandler messageHandler,
             MessageContextFiller messageContextFiller,
             MessageContextFactory<? extends MessageContext> messageContextFactory,
-            DefaultBotTaskQueueConfig defaultBotTaskQueueConfig,
-            SmartBotTaskQueueConfig smartBotTaskQueueConfig
+            BotQueueFactory botQueueFactory
     ) throws Exception {
         super(botConfig.getToken());
         this.messageContextFactory = messageContextFactory;
@@ -55,7 +51,7 @@ public class BotRunner extends TelegramLongPollingBot {
         this.botConfig = botConfig;
         this.messageHandler = messageHandler;
         this.messageContextFiller = messageContextFiller;
-        this.botTaskQueue = new ChatAwareBotTaskQueue(smartBotTaskQueueConfig, defaultBotTaskQueueConfig, this);
+        this.botTaskQueue = botQueueFactory.create(this);
         final int processors = Runtime.getRuntime().availableProcessors();
         for (int i = 0; i < processors; i++) {
             executors.add(Executors.newSingleThreadExecutor());

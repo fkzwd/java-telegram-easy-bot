@@ -1,5 +1,6 @@
 package com.vk.dwzkf.tglib.botcore.bot.queue;
 
+import com.vk.dwzkf.tglib.botcore.bot.queue.cfg.RateLimitConfig;
 import com.vk.dwzkf.tglib.botcore.bot.queue.cfg.SmartBotTaskQueueConfig;
 import com.vk.dwzkf.tglib.commons.utils.RateLimitCounter;
 import lombok.Getter;
@@ -35,7 +36,21 @@ public class SmartBotTaskQueue extends DefaultBotTaskQueue {
                 config.getUnit(),
                 config.getWindow()
         );
+    }
 
+    public SmartBotTaskQueue(
+            TelegramLongPollingBot bot,
+            SmartBotTaskQueueConfig config,
+            RateLimitConfig rateLimitConfig
+    ) {
+        super(config.getDefaultBotTaskQueueConfig(), bot);
+        this.bot = bot;
+        this.config = config;
+        this.rateLimitCounter = new RateLimitCounter(
+                rateLimitConfig.getLimit(),
+                rateLimitConfig.getUnit(),
+                rateLimitConfig.getWindow()
+        );
     }
 
     private static final Pattern awaitPattern = Pattern.compile("^.*(?<err>Too many requests: retry after (?<duration>\\d+))", Pattern.CASE_INSENSITIVE);

@@ -1,8 +1,10 @@
 package com.vk.dwzkf.tglib.botcore.bot.queue;
 
 import com.vk.dwzkf.tglib.botcore.bot.queue.cfg.DefaultBotTaskQueueConfig;
+import com.vk.dwzkf.tglib.botcore.bot.queue.cfg.RateLimitConfig;
 import com.vk.dwzkf.tglib.botcore.bot.queue.cfg.SmartBotTaskQueueConfig;
 import com.vk.dwzkf.tglib.botcore.exception.BotCoreException;
+import com.vk.dwzkf.tglib.commons.enums.ChatType;
 import lombok.extern.slf4j.Slf4j;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 
@@ -19,17 +21,14 @@ import java.util.concurrent.ScheduledExecutorService;
 @Slf4j
 public class ChatAwareBotTaskQueue implements BotTaskQueue {
     private final Map<String, BotTaskQueue> queues = new ConcurrentHashMap<>();
-    private final DefaultBotTaskQueueConfig config;
     private final TelegramLongPollingBot bot;
     private final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(20);
     private final SmartBotTaskQueueConfig smartConfig;
 
     public ChatAwareBotTaskQueue(
             SmartBotTaskQueueConfig smartBotTaskQueueConfig,
-            DefaultBotTaskQueueConfig config,
             TelegramLongPollingBot bot
     ) {
-        this.config = config;
         this.smartConfig = smartBotTaskQueueConfig;
         this.bot = bot;
     }
@@ -40,19 +39,42 @@ public class ChatAwareBotTaskQueue implements BotTaskQueue {
     }
 
     private <T> BotTaskQueue getQueueForChat(MessageTask<T> messageTask) {
-        return queues.computeIfAbsent(messageTask.getChatId(), k -> {
-            return createChatTaskQueue();
-        });
+        return queues.computeIfAbsent(messageTask.getChatId(), this::createChatTaskQueue);
     }
 
-    private BotTaskQueue createChatTaskQueue() {
+    private BotTaskQueue createChatTaskQueue(String chatId) {
+        RateLimitConfig rateLimitConfig = resolveRateLimitConfig(chatId);
         SmartBotTaskQueue smartBotTaskQueue = new SmartBotTaskQueue(
                 bot,
-                smartConfig
+                smartConfig,
+                rateLimitConfig
         );
         smartBotTaskQueue.setTaskExecutor(executorService);
         smartBotTaskQueue.init();
         return smartBotTaskQueue;
+    }
+
+    private RateLimitConfig resolveRateLimitConfig(String chatId) {
+        boolean isPrivate = !chatId.startsWith("-");
+        RateLimitConfig rateLimitConfig;
+
+        if (isPrivate) {
+            rateLimitConfig = smartConfig.getPrivateChatConfig();
+        } else {
+            rateLimitConfig = smartConfig.getGroupChatConfig();
+        }
+
+        rateLimitConfig = smartConfig.getDirectConfig()
+                .getOrDefault(chatId, rateLimitConfig);
+
+        if (rateLimitConfig == null) {
+            rateLimitConfig = new RateLimitConfig(
+                    smartConfig.getLimit(),
+                    smartConfig.getUnit(),
+                    smartConfig.getWindow()
+            );
+        }
+        return rateLimitConfig;
     }
 
     @Override
