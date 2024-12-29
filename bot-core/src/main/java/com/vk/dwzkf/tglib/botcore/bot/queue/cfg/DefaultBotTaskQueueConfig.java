@@ -1,9 +1,6 @@
 package com.vk.dwzkf.tglib.botcore.bot.queue.cfg;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
@@ -19,6 +16,7 @@ import java.util.concurrent.TimeUnit;
 @NoArgsConstructor
 @Getter
 @Setter
+@ToString
 public class DefaultBotTaskQueueConfig {
     private Long taskExecutionRate = 1L;
     private TimeUnit taskExecutionTimeUnit = TimeUnit.SECONDS;

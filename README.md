@@ -236,6 +236,9 @@ public class CustomContextHandler {
 > После того, как предыдущий инпут отработал, на его место встаёт тот,
 > который передан в `thenAwait`
 
+> В случае нескольких вызовов `await` подряд -  
+> они отрабатывают по очереди
+
 На примере заполнения следующего контекста:  
 ```java
 private static class ChainedInputContext {
@@ -255,6 +258,9 @@ public class ChainedInputWait {
 
     @RouteCommandHandler
     public void handle(CustomContext ctx) throws BotCoreException {
+
+    }
+}
 ```
 - Создаем обработчик текстового инпута; Он будет ждать корректного ввода.  
 При успехе будет обрабатывать данные и отвечать юзеру
@@ -345,6 +351,90 @@ public class ChainedInputWait {
 ```
 _Результат:_  
 ![](./docs/img/example_chained_input.gif)
+##### Отмена `await`-ов:
+> Для отмены `await`-ов используется метод `cancelAll(MessageContext)`
+> - Метод отменяет все `await`-ы созданные в **данном** чате **данным юзером**
+> - И возвращает список всех сообщений которые запустили эти `await`-ы
+
+**Создадим простой обработчик, который:**
+- Будет отменять все `await`-ы в чате
+- На каждое сообщение, которое запустило `await`, будет делать `reply` с сообщением _"Команда остановлена"_
+```java
+@Service
+@RouteCommand(command = "cancelawait")
+@RequiredArgsConstructor
+public class CancelAwaitCommand {
+    private final InputWaiterService inputWaiterService;
+
+    @RouteCommandHandler
+    public void handle(MessageContext messageContext) throws BotCoreException {
+        List<MessageContext> messageContexts = inputWaiterService.cancelAll(messageContext);
+        if (messageContexts.isEmpty()) {
+            messageContext.doReply("Нет ожидающих команд");
+        }
+        for (MessageContext context : messageContexts) {
+            context.doReply("Команда остановлена");
+        }
+    }
+}
+```
+_Результат:_  
+![](./docs/img/example_cancelawait.gif)
+#### 10. Настройка частоты отправки ботом сообщений
+По умолчанию бот отправляет не более **2 сообщений в секунду**  
+Интервал между сообщениями **150 мс**
+- Настройка интервала между сообщениями:  
+_application.yml_
+```yaml
+bot:
+  task-queue:
+    smart-bot-task-queue:
+      default-bot-task-queue-config:
+        task-execution-rate: 50 
+        task-execution-time-unit: MILLISECONDS
+        # 50 миллисекунд между сообщениями
+```
+
+- Настройка лимитов  
+_application.yml_
+```yaml
+bot:
+  task-queue:
+    smart-bot-task-queue:
+      window: 5
+      unit: SECONDS
+      limit: 2
+      # Не более двух сообщений в 5 секунд
+```
+##### Настройка лимитов для _приватного_ и _группового_ чатов:
+> Приватный и групповой чат по `chatId`:  
+> Отрицательный `chatId` = групповой чат  
+> Положительный `chatId` = приватный чат
+- Настройка лимитов для приватных чатов:
+```yaml
+bot:
+  task-queue:
+    smart-bot-task-queue:
+      private-chat-config:
+        window: 1
+        unit: SECONDS
+        limit: 3
+        # Не больше трех сообщений в секунду
+```
+- Настройка лимитов для групповых чатов:
+```yaml
+bot:
+  task-queue:
+    smart-bot-task-queue:
+      group-chat-config:
+        window: 1
+        unit: MINUTES
+        limit: 20
+        # Не больше 20 сообщений в минуту
+```
+
+#### 11.
+-- todo
 #### 42. Заполнение пользовательского контекста
 > TODO: ...
 ___
@@ -352,7 +442,4 @@ ___
 1. Поддержка различных `ActionType`
 2. Добавить `UnauthorizedHandler`
 3. Обработка когда форма обновляется точно такой же `[400] Bad Request: message is not modified`
-4. Добавить возможность отменять `InputWaitChain`  
-_например в инпуте вернуть форму и в ней кнопка "Завершить"_    
-_или по команде `/cancel`_
-5. 
+4.  

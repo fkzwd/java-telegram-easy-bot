@@ -3,9 +3,26 @@ bot:
   token: ${BOT_TOKEN}
   secure: false
   task-queue:
+    queue-factory:
+      type: smart
     default-bot-task-queue:
-      task-execution-rate: 1000
-      task-execution-time-unit: MILLISECONDS
+      task-execution-rate: 1
+      task-execution-time-unit: SECONDS
+    smart-bot-task-queue:
+      window: 5
+      unit: SECONDS
+      limit: 2
+      private-chat-config:
+        window: 1
+        unit: SECONDS
+        limit: 3
+      group-chat-config:
+        window: 1
+        unit: MINUTES
+        limit: 20
+      default-bot-task-queue-config:
+        task-execution-rate: 25
+        task-execution-time-unit: MILLISECONDS
   form-handler:
     enabled: true
 logging:
