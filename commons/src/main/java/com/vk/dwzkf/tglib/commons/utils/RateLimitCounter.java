@@ -1,4 +1,4 @@
-package com.vk.dwzkf.tglib.botcore.bot.queue;
+package com.vk.dwzkf.tglib.commons.utils;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author Roman Shageev
- * @since 25.12.2024
+ * @since 29.12.2024
  */
 @RequiredArgsConstructor
 @Slf4j
@@ -17,7 +17,16 @@ public class RateLimitCounter {
     private final TimeUnit unit;
     private final int window;
     private AtomicInteger current = new AtomicInteger(0);
-    private long windowStart = -1;
+    private volatile long windowStart = -1;
+
+
+    public synchronized void execute(Runnable action) {
+        if (wouldLimitExceed()) {
+            await();
+        }
+        action.run();
+        inc();
+    }
 
     public void inc() {
         if (windowStart == -1) {
@@ -60,6 +69,9 @@ public class RateLimitCounter {
 
     public void await() {
         try {
+            if (windowStart == -1) {
+                return;
+            }
             long sleepTime = Math.max(getWindowMillis() - getTimeElapsed(), 0);
             log.info("Await for {} ms", sleepTime);
             Thread.sleep(sleepTime);

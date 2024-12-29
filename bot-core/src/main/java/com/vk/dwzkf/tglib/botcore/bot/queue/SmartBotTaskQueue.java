@@ -1,21 +1,13 @@
 package com.vk.dwzkf.tglib.botcore.bot.queue;
 
-import com.vk.dwzkf.tglib.botcore.bot.queue.cfg.DefaultBotTaskQueueConfig;
 import com.vk.dwzkf.tglib.botcore.bot.queue.cfg.SmartBotTaskQueueConfig;
-import com.vk.dwzkf.tglib.botcore.exception.BotCoreException;
+import com.vk.dwzkf.tglib.commons.utils.RateLimitCounter;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -25,7 +17,6 @@ import java.util.regex.Pattern;
  */
 @Slf4j
 public class SmartBotTaskQueue extends DefaultBotTaskQueue {
-    private static final AtomicInteger counter = new AtomicInteger(0);
     private final SmartBotTaskQueueConfig config;
     private final RateLimitCounter rateLimitCounter;
 
@@ -47,14 +38,15 @@ public class SmartBotTaskQueue extends DefaultBotTaskQueue {
 
     }
 
-    private static final Pattern awaitPatter = Pattern.compile("^.*(?<err>Too many requests: retry after (?<duration>\\d+))", Pattern.CASE_INSENSITIVE);
+    private static final Pattern awaitPattern = Pattern.compile("^.*(?<err>Too many requests: retry after (?<duration>\\d+))", Pattern.CASE_INSENSITIVE);
+
     @Override
     protected void handleApiException(ExecutableTask executableTask, TelegramApiException e) {
         //Too Many Requests: retry after 33
         String message = e.getMessage();
         if (message != null && !message.isBlank()) {
             message = message.toLowerCase();
-            Matcher matcher = awaitPatter.matcher(message);
+            Matcher matcher = awaitPattern.matcher(message);
             int secondsToAwait = Integer.parseInt(matcher.group("duration"));
             try {
                 Thread.sleep(secondsToAwait * 1000L);
@@ -81,18 +73,15 @@ public class SmartBotTaskQueue extends DefaultBotTaskQueue {
     }
 
     protected void executorLoop() {
-        try {
-            if (rateLimitCounter.wouldLimitExceed()) {
-                rateLimitCounter.await();
+        rateLimitCounter.execute(() -> {
+            try {
+                log.info("Current queue size: {}", queue.size());
+                ExecutableTask<?> executableTask = queue.take();
+                executeTask(executableTask, 0);
+            } catch (Exception e) {
+                log.error("Error on executing task", e);
             }
-            log.info("Current queue size: {}", queue.size());
-            ExecutableTask<?> executableTask = queue.take();
-            executeTask(executableTask, 0);
-            rateLimitCounter.inc();
-        } catch (Exception e) {
-            log.error("Error on executing task", e);
-//            throw new RuntimeException(e);
-        }
+        });
     }
 
     @Override
