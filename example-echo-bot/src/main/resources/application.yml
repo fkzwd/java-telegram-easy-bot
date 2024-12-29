@@ -10,8 +10,8 @@ bot:
       limit: 2
       window: 5
       unit: SECONDS
-      default-bot-task-queue:
-        task-execution-rate: 150
+      default-bot-task-queue-config:
+        task-execution-rate: 25
         task-execution-time-unit: MILLISECONDS
   form-handler:
     enabled: true
